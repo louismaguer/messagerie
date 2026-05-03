@@ -6,8 +6,14 @@ class User(SQLModel, table=True):
     name: str
     email: str
 
-    messages_envoyes: List["Message"] = Relationship(back_populates="expediteur")
-    messages_recus: List["Message"] = Relationship(back_populates="destinataire")
+    messages_envoyes: List["Message"] = Relationship(
+        back_populates="expediteur",
+        sa_relationship_kwargs={"foreign_keys": "Message.expediteur_id"}
+    )
+    messages_recus: List["Message"] = Relationship(
+        back_populates="destinataire",
+        sa_relationship_kwargs={"foreign_keys": "Message.destinataire_id"}
+    )
 
 class Message(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -15,10 +21,16 @@ class Message(SQLModel, table=True):
     content: str
 
     expediteur_id: int = Field(foreign_key="user.id")
-    expediteur: User = Relationship(back_populates="messages_envoyes")
+    expediteur: User = Relationship(
+        back_populates="messages_envoyes",
+        sa_relationship_kwargs={"foreign_keys": "Message.expediteur_id"}
+    )
 
     destinataire_id: int = Field(foreign_key="user.id")
-    destinataire: User = Relationship(back_populates="messages_recus")
+    destinataire: User = Relationship(
+        back_populates="messages_recus",
+        sa_relationship_kwargs={"foreign_keys": "Message.destinataire_id"}
+    )
 
 # typical boilerplate code
 
