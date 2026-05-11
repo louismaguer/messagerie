@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, Field, Relationship, select, col, func
-from typing import List
+from typing import List, Dict
 from datetime import datetime
 
 class User(SQLModel, table=True):
@@ -43,9 +43,28 @@ def get_session():
 # this uses so-called "dependency injection"
 # meaning the session is (re-)created on demand by FastAPI
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 
 app = FastAPI()
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[int, WebSocket] = {}
+
+    async def connect(self, websocket: WebSocket, user_id: int):
+        await websocket.accept()
+        self.active_connections[user_id] = websocket
+
+    def disconnect(self, user_id: int):
+        if user_id in self.active_connections:
+            del self.active_connections[user_id]
+
+    async def send_json_message(self, data: dict, user_id: int):
+        if user_id in self.active_connections:
+            websocket = self.active_connections[user_id]
+            await websocket.send_json(data)
+
+manager = ConnectionManager()
 
 @app.post("/users/", response_model=User)
 def create_user(user: User, session: Session = Depends(get_session)):
@@ -75,7 +94,7 @@ def get_user(user_id: int, session: Session = Depends(get_session)):
     return user
 
 @app.post("/messages/", response_model=Message)
-def create_message(message: Message, session: Session = Depends(get_session)):
+async def create_message(message: Message, session: Session = Depends(get_session)):
     
     sender = session.get(User, message.sender_id)
     if not sender:
@@ -95,6 +114,10 @@ def create_message(message: Message, session: Session = Depends(get_session)):
     session.add(message)
     session.commit()
     session.refresh(message)  # reload the object with the generated ID
+
+    message_data = {"id": message.id, "subject": message.subject, "body": message.body, "date": message.date, "is_read": message.is_read, "sender_id": message.sender_id, "receiver_id": message.receiver_id}
+    await manager.send_json_message(message_data, message.receiver_id)
+
     return message
 
 @app.get("/messages/", response_model=List[Message])
@@ -169,3 +192,17 @@ def get_unread_count(user_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Utilisateur inexistant")
     count = session.exec(select(func.count(col(Message.id))).where(Message.receiver_id == user_id, Message.is_read == False)).one()
     return {"unread_count": count}
+
+@app.websocket("/ws/users/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: int, session: Session = Depends(get_session)):
+    user = session.get(User, user_id)
+    if not user:
+        await websocket.close()
+        return
+
+    await manager.connect(websocket, user_id)
+    try:
+        while True:
+            await websocket.receive_json()
+    except WebSocketDisconnect:
+        manager.disconnect(user_id)
