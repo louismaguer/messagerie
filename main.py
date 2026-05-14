@@ -44,25 +44,45 @@ def get_session():
 # meaning the session is (re-)created on demand by FastAPI
 
 from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+# -----------------
+# CORS setup (it's black magic - keep as-is)
+# -----------------
+origins = [
+    "*"  # allow all origins for simplicity (not recommended for production)
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_methods=["*"],  # allow all HTTP methods
+    allow_headers=["*"],  # allow all headers
+)
+
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: Dict[int, WebSocket] = {}
+        self.active_connections: Dict[int, List[WebSocket]] = {}
 
     async def connect(self, websocket: WebSocket, user_id: int):
         await websocket.accept()
-        self.active_connections[user_id] = websocket
+        if user_id not in self.active_connections:
+            self.active_connections[user_id] = []
+        self.active_connections[user_id].append(websocket)
 
-    def disconnect(self, user_id: int):
+    def disconnect(self, websocket: WebSocket, user_id: int):
         if user_id in self.active_connections:
-            del self.active_connections[user_id]
+            if websocket in self.active_connections[user_id]:
+                self.active_connections[user_id].remove(websocket)
+            if not self.active_connections[user_id]:
+                del self.active_connections[user_id]
 
     async def send_json_message(self, data: dict, user_id: int):
         if user_id in self.active_connections:
-            websocket = self.active_connections[user_id]
-            await websocket.send_json(data)
+            for websocket in self.active_connections[user_id]:
+                await websocket.send_json(data)
 
 manager = ConnectionManager()
 
@@ -115,7 +135,7 @@ async def create_message(message: Message, session: Session = Depends(get_sessio
     session.commit()
     session.refresh(message)  # reload the object with the generated ID
 
-    message_data = {"id": message.id, "subject": message.subject, "body": message.body, "date": message.date, "is_read": message.is_read, "sender_id": message.sender_id, "receiver_id": message.receiver_id}
+    message_data = {"id": message.id, "subject": message.subject, "body": message.body, "date": message.date.isoformat(), "is_read": message.is_read, "sender_id": message.sender_id, "receiver_id": message.receiver_id}
     await manager.send_json_message(message_data, message.receiver_id)
 
     return message
@@ -205,4 +225,4 @@ async def websocket_endpoint(websocket: WebSocket, user_id: int, session: Sessio
         while True:
             await websocket.receive_json()
     except WebSocketDisconnect:
-        manager.disconnect(user_id)
+        manager.disconnect(websocket, user_id)

@@ -1,0 +1,67 @@
+<head>
+    <meta charset="UTF-8">
+    <title>Messagerie</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Messagerie</h1>
+        
+        <h2>Créer un utilisateur</h2>
+        <div class="form">
+            <label for="new-username">Nom d'utilisateur :</label>
+            <input type="text" id="new-username">
+        </div>
+        <div class="form">
+            <label for="new-email">E-mail :</label>
+            <input type="text" id="new-email">
+        </div>
+        <button onclick="createUser()">Créer l'utilisateur</button>
+        <p id="create-user-status" style="font-weight: bold;"></p>
+
+        <hr>
+
+        <div class="form">
+            <label for="current-user">Utilisateur actuel :</label>
+            <select id="current-user"></select>
+            <span id="unread-count" style="margin-left: 10px; color: #007BFF; font-weight: bold;"></span><br>
+            <button style="margin-top: 10px;" onclick="loadInbox()">Boîte de réception</button>
+            <button style="margin-top: 10px; background: #6c757d;" onclick="loadSent()">Messages envoyés</button>
+        </div>
+
+        <hr>
+
+        <h2 id="messages-title">Boîte de réception</h2>
+
+        <div id="filters" style="background: #eee; padding: 10px; border-radius: 4px; margin-bottom: 15px; display: none;">
+            <strong>Filtres :</strong><br>
+            <label style="display:inline; font-weight: normal;"><input type="checkbox" id="filter-unread"> Non lus uniquement</label> | 
+            Recherche : <input type="text" id="filter-search" placeholder="Mot-clé" style="width:120px; display:inline; padding: 4px;"> | 
+            Limite : <input type="number" id="filter-limit" value="10" style="width:60px; display:inline; padding: 4px;"> | 
+            Décalage : <input type="number" id="filter-offset" value="0" style="width:60px; display:inline; padding: 4px;">
+            <button onclick="loadInbox()" style="padding: 4px 8px; font-size: 0.8em; margin-left: 10px;">Appliquer</button>
+        </div>
+        <div id="inbox"></div>
+
+        <hr>
+
+        <h2>Envoyer un message</h2>
+        <div class="form">
+            <label for="receiver-id">Destinataire :</label>
+            <select id="receiver-id"></select>
+        </div>
+        <div class="form">
+            <label for="subject">Objet :</label>
+            <input type="text" id="subject">
+        </div>
+        <div class="form">
+            <label for="body">Message :</label>
+            <textarea id="body" rows="3"></textarea>
+        </div>
+        <button onclick="sendMessage()">Envoyer</button>
+        <p id="send-status" style="font-weight: bold; margin-top: 10px;"></p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
