@@ -4,9 +4,11 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Conteneur principal de la messagerie -->
     <div class="container">
         <h1>Messagerie</h1>
         
+        <!-- Création d'un nouvel utilisateur -->
         <h2>Créer un utilisateur</h2>
         <div class="form">
             <label for="new-username">Nom d'utilisateur :</label>
@@ -21,6 +23,7 @@
 
         <hr>
 
+        <!-- Sélection de l'utilisateur actif et menu de navigation -->
         <div class="form">
             <label for="current-user">Utilisateur actuel :</label>
             <select id="current-user"></select>
@@ -31,8 +34,10 @@
 
         <hr>
 
+        <!-- Affichage de la boîte de réception ou des messages envoyés -->
         <h2 id="messages-title">Boîte de réception</h2>
 
+        <!-- Filtres pour la boîte de réception -->
         <div id="filters" style="background: #eee; padding: 10px; border-radius: 4px; margin-bottom: 15px; display: none;">
             <strong>Filtres :</strong><br>
             <label style="display:inline; font-weight: normal;"><input type="checkbox" id="filter-unread"> Non lus uniquement</label> | 
@@ -41,10 +46,13 @@
             Décalage : <input type="number" id="filter-offset" value="0" style="width:60px; display:inline; padding: 4px;">
             <button onclick="loadInbox()" style="padding: 4px 8px; font-size: 0.8em; margin-left: 10px;">Appliquer</button>
         </div>
+        
+        <!-- Conteneur des messages -->
         <div id="inbox"></div>
 
         <hr>
 
+        <!-- Envoi d'un nouveau message -->
         <h2>Envoyer un message</h2>
         <div class="form">
             <label for="receiver-id">Destinataire :</label>

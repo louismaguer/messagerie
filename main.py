@@ -2,6 +2,7 @@ from sqlmodel import SQLModel, Field, Relationship, select, col, func
 from typing import List, Dict
 from datetime import datetime
 
+# Entité Utilisateur
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str
@@ -10,6 +11,7 @@ class User(SQLModel, table=True):
     sent_messages: List["Message"] = Relationship(back_populates="sender", sa_relationship_kwargs={"foreign_keys": "Message.sender_id"})
     received_messages: List["Message"] = Relationship(back_populates="receiver", sa_relationship_kwargs={"foreign_keys": "Message.receiver_id"})
 
+# Entité Message
 class Message(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     subject: str
@@ -22,6 +24,8 @@ class Message(SQLModel, table=True):
 
     receiver_id: int = Field(foreign_key="user.id")
     receiver: User = Relationship(back_populates="received_messages", sa_relationship_kwargs={"foreign_keys": "Message.receiver_id"})
+
+## Lancement SQLModel & FastAPI, lien avec HTML
 
 # typical boilerplate code
 
@@ -62,6 +66,7 @@ app.add_middleware(
     allow_headers=["*"],  # allow all headers
 )
 
+# ConnectionManager pour WebSocket
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[int, List[WebSocket]] = {}
@@ -86,7 +91,8 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.post("/users/", response_model=User)
+# Créer un nouvel utilisateur
+@app.post("/users/", response_model=User, status_code=201)
 def create_user(user: User, session: Session = Depends(get_session)):
     existing_user = session.exec(select(User).where(User.name == user.name)).first()
     if existing_user:
@@ -96,8 +102,7 @@ def create_user(user: User, session: Session = Depends(get_session)):
     session.refresh(user)  # reload the object with the generated ID
     return user
 
-from typing import List
-
+# Lister tous les utilisateurs
 @app.get("/users/", response_model=List[User])
 def list_users(limit: int | None = None, offset: int = 0, session: Session = Depends(get_session)):
     query = select(User).offset(offset)
@@ -106,6 +111,7 @@ def list_users(limit: int | None = None, offset: int = 0, session: Session = Dep
     users = session.exec(query).all()
     return users
 
+# Récupérer les détails d'un utilisateur spécifique
 @app.get("/users/{user_id}", response_model=User)
 def get_user(user_id: int, session: Session = Depends(get_session)):
     user = session.get(User, user_id)
@@ -113,7 +119,8 @@ def get_user(user_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Utilisateur inexistant")
     return user
 
-@app.post("/messages/", response_model=Message)
+# Envoyer un nouveau message
+@app.post("/messages/", response_model=Message, status_code=201)
 async def create_message(message: Message, session: Session = Depends(get_session)):
     
     sender = session.get(User, message.sender_id)
@@ -140,6 +147,7 @@ async def create_message(message: Message, session: Session = Depends(get_sessio
 
     return message
 
+# Lister tous les messages, ou seulement une certaine tranche
 @app.get("/messages/", response_model=List[Message])
 def list_messages(limit: int | None = None, offset: int = 0, session: Session = Depends(get_session)):
     query = select(Message).offset(offset)
@@ -148,6 +156,7 @@ def list_messages(limit: int | None = None, offset: int = 0, session: Session = 
     messages = session.exec(query).all()
     return messages
 
+# Consulter la boite de réception d'un utilisateur, avec des paramètres de filtrage
 @app.get("/users/{user_id}/inbox", response_model=List[Message])
 def get_inbox(user_id: int, unread_only: bool = False, limit: int | None = None, offset: int = 0, search: str | None = None, session: Session = Depends(get_session)):
     user = session.get(User, user_id)
@@ -167,6 +176,7 @@ def get_inbox(user_id: int, unread_only: bool = False, limit: int | None = None,
     messages = session.exec(query).all()
     return messages
 
+# Consulter les messages envoyés par un utilisateur
 @app.get("/users/{user_id}/sent", response_model=List[Message])
 def get_sent_messages(user_id: int, limit: int | None = None, offset: int = 0, session: Session = Depends(get_session)):
     user = session.get(User, user_id)
@@ -178,6 +188,7 @@ def get_sent_messages(user_id: int, limit: int | None = None, offset: int = 0, s
     messages = session.exec(query).all()
     return messages
 
+# Consulter le détail d'un message donné
 @app.get("/messages/{message_id}", response_model=Message)
 def get_message(message_id: int, session: Session = Depends(get_session)):
     message = session.get(Message, message_id)
@@ -185,6 +196,7 @@ def get_message(message_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Message inexistant")
     return message
 
+# Marquer un message comme lu
 @app.patch("/messages/{message_id}/read", response_model=Message)
 def mark_message_as_read(message_id: int, session: Session = Depends(get_session)):
     message = session.get(Message, message_id)
@@ -196,6 +208,7 @@ def mark_message_as_read(message_id: int, session: Session = Depends(get_session
     session.refresh(message)
     return message
 
+# Supprimer un message
 @app.delete("/messages/{message_id}")
 def delete_message(message_id: int, session: Session = Depends(get_session)):
     message = session.get(Message, message_id)
@@ -205,6 +218,7 @@ def delete_message(message_id: int, session: Session = Depends(get_session)):
     session.commit()
     return {"detail": "Message supprimé"}
 
+# Récupérer le nombre de messages non lus d'un utilisateur
 @app.get("/users/{user_id}/unread_count")
 def get_unread_count(user_id: int, session: Session = Depends(get_session)):
     user = session.get(User, user_id)
@@ -213,6 +227,7 @@ def get_unread_count(user_id: int, session: Session = Depends(get_session)):
     count = session.exec(select(func.count(col(Message.id))).where(Message.receiver_id == user_id, Message.is_read == False)).one()
     return {"unread_count": count}
 
+# Endpoint WebSocket permettant de notifier un utilisateur en direct de la réception d'un nouveau message
 @app.websocket("/ws/users/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: int, session: Session = Depends(get_session)):
     user = session.get(User, user_id)

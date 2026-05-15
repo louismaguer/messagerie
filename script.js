@@ -1,6 +1,7 @@
 const API_BASE = "http://localhost:8000";
 let usersMap = {};
 
+// Créer un nouvel utilisateur
 async function createUser() {
     const name = document.getElementById("new-username").value;
     const email = document.getElementById("new-email").value;
@@ -31,6 +32,7 @@ async function createUser() {
     }
 }
 
+// Lister tous les utilisateurs (pour les menus déroulants)
 async function listUsers() {
     const response = await fetch(`${API_BASE}/users/`);
     const users = await response.json();
@@ -52,6 +54,7 @@ async function listUsers() {
     }
 }
 
+// Créer un nouveau message : formatage HTML
 function createInboxMessageHTML(msg) {
     return `
         <div class="message ${msg.is_read ? '' : 'unread'}" id="message-${msg.id}">
@@ -67,12 +70,14 @@ function createInboxMessageHTML(msg) {
     `;
 }
 
+// Mettre à jour le nombre de messages non lus d'un utilisateur
 async function updateUnreadCount(userId) {
     const response = await fetch(`${API_BASE}/users/${userId}/unread_count`);
     const data = await response.json();
     document.getElementById("unread-count").innerText = `${data.unread_count} message(s) non lu(s)`;
 }
 
+// Charger la boîte de réception d'un utilisateur, avec d'éventuels paramètres de filtrage
 async function loadInbox() {
     const userId = document.getElementById("current-user").value;
     const inboxDiv = document.getElementById("inbox");
@@ -105,6 +110,7 @@ async function loadInbox() {
     }
 }
 
+// Charger la liste des messages envoyés d'un utilisateur
 async function loadSent() {
     const userId = document.getElementById("current-user").value;
     const inboxDiv = document.getElementById("inbox");
@@ -136,17 +142,20 @@ async function loadSent() {
     }
 }
 
+// Marquer un message comme lu
 async function markAsRead(msgId) {
     await fetch(`${API_BASE}/messages/${msgId}/read`, { method: "PATCH" });
     loadInbox();
 }
 
+// Supprimer un message
 async function deleteMessage(msgId) {
     const response = await fetch(`${API_BASE}/messages/${msgId}`, { method: "DELETE" });
     if (document.getElementById("messages-title").innerText === "Boîte de réception") loadInbox();
     else loadSent();
 }
 
+// Envoyer un message
 async function sendMessage() {
     const senderId = document.getElementById("current-user").value;
     const receiverId = document.getElementById("receiver-id").value;
@@ -188,7 +197,7 @@ async function sendMessage() {
     }
 }
 
-
+// Logique WebSocket
 let socket = null;
 
 function setupWebSocket(userId) {
@@ -224,12 +233,14 @@ function setupWebSocket(userId) {
     };
 }
 
+// Changer d'utilisateur actif
 document.getElementById('current-user').addEventListener('change', (e) => {
     localStorage.setItem("currentUserId", e.target.value);
     setupWebSocket(e.target.value);
     loadInbox();
 });
 
+// Initialiser la messagerie au chargement de la page
 window.addEventListener('DOMContentLoaded', async () => {
     await listUsers();
     const userId = document.getElementById('current-user').value;
