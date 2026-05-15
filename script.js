@@ -99,11 +99,11 @@ async function loadInbox() {
     try {
         const response = await fetch(url);
         const messages = await response.json();
+        document.getElementById("messages-title").innerText = "Boîte de réception";
         if (messages.length === 0) {
             inboxDiv.innerHTML = "<p>Aucun message dans la boîte de réception.</p>";
             return;
         }
-        document.getElementById("messages-title").innerText = "Boîte de réception";
         inboxDiv.innerHTML = messages.map(msg => createInboxMessageHTML(msg)).join("");
     } catch {
         inboxDiv.innerHTML = `<p style="color: red;">Erreur de connexion</p>`;
@@ -121,12 +121,12 @@ async function loadSent() {
     try {
         const response = await fetch(`${API_BASE}/users/${userId}/sent`);
         const messages = await response.json();
+        document.getElementById("messages-title").innerText = "Messages envoyés";
         if (messages.length === 0) {
             inboxDiv.innerHTML = "<p>Aucun message envoyé.</p>";
             return;
         }
 
-        document.getElementById("messages-title").innerText = "Messages envoyés";
         inboxDiv.innerHTML = messages.map(msg => `
             <div class="message" id="message-${msg.id}">
                 <div class="message-meta">
